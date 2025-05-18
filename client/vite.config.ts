@@ -12,16 +12,16 @@ export default defineConfig({
     },
   },
   server: {
-    host: '0.0.0.0', // Allow connections from all hosts/IP addresses
+    host: "0.0.0.0", // Allow connections from all hosts/IP addresses
     port: 5173,
     strictPort: true, // Fail if port is already in use
     allowedHosts: [
-      'localhost',
-      'login.lvh.me',
-      'acme.lvh.me',
-      'globex.lvh.me',
-      'lvh.me',
-      '.lvh.me' // Allow all subdomains of lvh.me
+      "localhost",
+      "login.lvh.me",
+      "acme.lvh.me",
+      "globex.lvh.me",
+      "lvh.me",
+      ".lvh.me", // Allow all subdomains of lvh.me
     ],
     proxy: {
       "/api": {
@@ -31,10 +31,10 @@ export default defineConfig({
       },
     },
     cors: true, // Enable CORS for all origins
-    open: true, // Open browser on start
+    open: "http://login.lvh.me:5173/login", // Open specific URL on start
     hmr: {
       // Allow HMR connections from all hosts
-      host: 'localhost',
+      host: "localhost",
       port: 5173,
     },
   },
