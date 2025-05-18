@@ -58,12 +58,18 @@ export default function DashboardPage() {
                   <span>
                     <strong>{tenant}</strong>
                   </span>
-                  <a
-                    href={`http://login.lvh.me:5173/api/auth/init-session/${tenant}`}
+                  <button
+                    onClick={() => {
+                      const port = window.location.port;
+                      const protocol = window.location.protocol;
+                      const tenantUrl = `${protocol}//${tenant}.lvh.me:${port}`;
+                      console.log(`Navigating to tenant: ${tenantUrl}`);
+                      window.location.href = tenantUrl;
+                    }}
                     className="ml-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
                   >
                     Login to {tenant}
-                  </a>
+                  </button>
                 </div>
               ))
             ) : (

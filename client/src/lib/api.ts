@@ -4,12 +4,13 @@ import type { LoginFormData } from "../schemas/user";
 // Determine the API base URL based on current hostname
 const getBaseUrl = () => {
   const hostname = window.location.hostname;
-  const port = "3000"; // Backend port
+  const port = window.location.port || "3000"; // Use current port or default to 3000
+  const protocol = window.location.protocol; // Get current protocol (http: or https:)
 
-  console.log("API: Getting base URL for hostname:", hostname);
+  console.log("API: Getting base URL for hostname:", hostname, "port:", port);
 
-  // Always use the current hostname for API requests to preserve tenant context
-  const url = `http://${hostname}:${port}/api`;
+  // Always use the current hostname and port for API requests
+  const url = `${protocol}//${hostname}:${port}/api`;
   console.log("API: Using base URL:", url);
   return url;
 };
@@ -20,7 +21,15 @@ const isLoginDomain = () => {
 };
 
 const isTenantDomain = () => {
-  return /^tenant\d+\.lvh\.me$/.test(window.location.hostname);
+  // More flexible pattern to match any subdomain that isn't 'login'
+  const hostname = window.location.hostname;
+  console.log("Checking if tenant domain:", hostname);
+
+  // Check for any subdomain of lvh.me that isn't 'login'
+  const isValid =
+    hostname.endsWith(".lvh.me") && !hostname.startsWith("login.");
+  console.log("Is tenant domain:", isValid);
+  return isValid;
 };
 
 // Create axios instance with default config

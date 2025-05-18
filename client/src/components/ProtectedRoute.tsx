@@ -24,10 +24,24 @@ export function ProtectedRoute({
       const isTenantDomain = authService.isTenantDomain();
       const isLoginDomain = authService.isLoginDomain();
 
+      // Get current protocol and port
+      const protocol = window.location.protocol;
+      const port = window.location.port || "3000";
+      console.log("Current protocol:", protocol, "port:", port);
+
       if (requireTenant && !isTenantDomain) {
-        window.location.href = "http://login.lvh.me:3000";
+        console.log(
+          "Redirecting to login domain - tenant required but not on tenant domain"
+        );
+        window.location.href = `${protocol}//login.lvh.me:${port}`;
       } else if (!requireTenant && !isLoginDomain && user) {
-        window.location.href = `http://${user.tenants[0]}.lvh.me:3000`;
+        // If user has tenants, redirect to the first one
+        if (user.tenants && user.tenants.length > 0) {
+          console.log("Redirecting to tenant domain:", user.tenants[0]);
+          window.location.href = `${protocol}//${user.tenants[0]}.lvh.me:${port}`;
+        } else {
+          console.log("No tenants available for user");
+        }
       }
     }
   }, [isLoading, user, requireTenant]);

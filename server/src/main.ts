@@ -5,6 +5,8 @@ import * as session from 'express-session';
 import * as csurf from 'csurf';
 import { Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import * as express from 'express';
+import * as path from 'path';
 
 const tenantTokens = new Map<
   string,
@@ -55,6 +57,11 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix('api');
+
+  // Serve static files from the client/dist directory
+  const clientPath = path.join(__dirname, '..', '..', 'client', 'dist');
+  logger.log(`Serving static files from: ${clientPath}`);
+  app.use(express.static(clientPath));
 
   app.enableCors({
     origin: (
@@ -121,6 +128,19 @@ async function bootstrap() {
   // Store token map globally
   (global as unknown as { tenantTokens: Map<string, any> }).tenantTokens =
     tenantTokens;
+
+  // Add catch-all route handler for SPA client-side routing
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // Skip API routes
+    if (req.originalUrl.startsWith('/api')) {
+      return next();
+    }
+
+    // Serve the index.html for all other routes
+    res.sendFile(
+      path.join(__dirname, '..', '..', 'client', 'dist', 'index.html'),
+    );
+  });
 
   await app.listen(process.env.PORT ?? 3000);
   logger.log(`Application is running on: ${await app.getUrl()}`);

@@ -46,18 +46,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, []);
 
-  // Set up session validation interval
+  // Set up a simple session check for tenant domains, but let server handle redirects
   useEffect(() => {
     if (authService.isTenantDomain()) {
-      const interval = setInterval(async () => {
-        const isValid = await authService.validateSession();
-        if (!isValid) {
-          setUser(null);
-          window.location.href = "http://login.lvh.me:3000";
-        }
-      }, 5 * 60 * 1000); // Check every 5 minutes
+      console.log("On tenant domain, loading user data");
 
-      return () => clearInterval(interval);
+      // Just try to load user data, let server handle auth
+      const loadUserData = async () => {
+        try {
+          const userData = await authService.getMe();
+          console.log("User data loaded:", userData);
+          setUser(userData);
+        } catch (error) {
+          console.error(
+            "Failed to get user data, server should handle redirect:",
+            error
+          );
+          // Don't redirect here, let the server API response trigger a redirect if needed
+        } finally {
+          // Always set loading to false to avoid infinite loading state
+          setIsLoading(false);
+        }
+      };
+
+      loadUserData();
     }
   }, []);
 
@@ -82,7 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       await authService.logout();
       setUser(null);
-      window.location.href = "http://login.lvh.me:3000";
+
+      // Use current protocol and port
+      const protocol = window.location.protocol;
+      const port = window.location.port || "3000";
+      window.location.href = `${protocol}//login.lvh.me:${port}`;
     } catch (err: unknown) {
       console.error("Failed to logout", err);
       const apiError = err as ApiError;
@@ -105,7 +121,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const validateSession = async () => {
     try {
-      return await authService.validateSession();
+      // Add timeout to prevent hanging forever
+      const timeoutPromise = new Promise<boolean>((resolve) => {
+        setTimeout(() => {
+          console.warn("Session validation timed out");
+          resolve(false);
+        }, 5000); // 5 second timeout
+      });
+
+      // Race the validation against timeout
+      return await Promise.race([
+        authService.validateSession(),
+        timeoutPromise,
+      ]);
     } catch (err: unknown) {
       console.error("Failed to validate session", err);
       return false;

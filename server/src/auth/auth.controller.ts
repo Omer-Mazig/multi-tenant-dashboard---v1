@@ -75,12 +75,18 @@ export class AuthController {
 
   @UseGuards(LoginSessionGuard)
   @Get('init-session/:tenantId')
-  initSession(
+  async initSession(
     @Req() req: Request,
     @Res() res: Response,
     @Param('tenantId') tenantId: string,
   ) {
-    this.logger.debug(`Init session for tenant: ${tenantId}`);
+    // Add detailed request logging
+    this.logger.log(`Init session for tenant: ${tenantId}`);
+    this.logger.log(`Request headers: ${JSON.stringify(req.headers)}`);
+    this.logger.log(`Request host: ${req.headers.host}`);
+    this.logger.log(`Request hostname: ${req.hostname}`);
+    this.logger.log(`Request origin: ${req.headers.origin}`);
+    this.logger.log(`Request protocol: ${req.protocol}`);
     try {
       this.logger.debug(`Initializing session for tenant: ${tenantId}`);
       const userId = req.session.user?.id;
@@ -104,12 +110,24 @@ export class AuthController {
       // Generate a token for tenant authentication
       const token = this.authService.generateTenantToken(userId, tenantId);
 
+      // Get the port from the original request
+      const originalPort = req.headers.host?.split(':')[1] || '5173';
+      this.logger.debug(`Original request port: ${originalPort}`);
+
+      // Extract the protocol
+      const protocol = req.protocol || 'http';
+      this.logger.debug(`Protocol: ${protocol}`);
+
+      const redirectUrl = `${protocol}://${tenantId}.lvh.me:${originalPort}/api/tenant/verify-token/${token}`;
       // Redirect to tenant domain with the token
-      this.logger.debug(`Redirecting to tenant domain with token: ${token}`);
-      return res.redirect(
-        301,
-        `http://${tenantId}.lvh.me:5173/api/tenant/verify-token/${token}`,
+      this.logger.debug(
+        `Redirecting to tenant domain with URL: ${redirectUrl}`,
       );
+
+      // Add a short delay to ensure token is properly stored
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      return res.redirect(302, redirectUrl);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';

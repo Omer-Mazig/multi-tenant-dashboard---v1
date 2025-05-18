@@ -27,8 +27,8 @@ export class TenantService {
     return this.authService.generateTenantToken(userId, tenantId);
   }
 
-  verifyTenantToken(token: string, req: Request): boolean {
-    const result = this.authService.verifyTenantToken(token, req);
+  async verifyTenantToken(token: string, req: Request): Promise<boolean> {
+    const result = await this.authService.verifyTenantToken(token, req);
 
     if (!result.success) {
       this.logger.error(`Token verification failed: ${result.message}`);

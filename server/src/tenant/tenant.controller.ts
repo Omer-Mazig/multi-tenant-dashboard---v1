@@ -24,20 +24,49 @@ export class TenantController {
   ) {}
 
   @Get('verify-token/:token')
-  verifyToken(
+  async verifyToken(
     @Param('token') token: string,
     @Req() req: Request,
     @Res() res: Response,
   ) {
     try {
-      this.logger.debug(`Verifying one-time token`);
+      this.logger.debug(`Verifying one-time token: ${token}`);
+      this.logger.debug(
+        `Hostname: ${req.hostname}, Headers host: ${req.headers.host}`,
+      );
 
-      const result = this.authService.verifyTenantToken(token, req);
+      const result = await this.authService.verifyTenantToken(token, req);
+      this.logger.debug(`Token verification result: ${JSON.stringify(result)}`);
 
-      if (!result) {
-        throw new UnauthorizedException('Invalid or expired token');
+      if (!result.success) {
+        this.logger.error(`Token verification failed: ${result.message}`);
+        throw new UnauthorizedException(
+          result.message || 'Invalid or expired token',
+        );
       } else {
-        res.redirect(301, '/');
+        this.logger.debug(
+          `Token verified successfully, sending HTML response with redirect`,
+        );
+
+        // Instead of using redirect, send HTML with JavaScript that redirects
+        res.setHeader('Content-Type', 'text/html');
+        return res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Authentication Successful</title>
+            <script>
+              console.log("Authentication successful, redirecting to dashboard");
+              // Use window.location.origin to maintain the same host and port
+              window.location.href = window.location.origin + '/';
+            </script>
+          </head>
+          <body>
+            <h1>Authentication successful</h1>
+            <p>Redirecting to dashboard...</p>
+          </body>
+          </html>
+        `);
       }
     } catch (error: unknown) {
       const errorMessage =

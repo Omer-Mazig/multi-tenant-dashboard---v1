@@ -21,10 +21,24 @@ class AuthService {
   async loginToTenant(tenantId: string): Promise<void> {
     // Use the correct endpoint based on our API structure
     if (this.isLoginDomain()) {
-      // For login domain, redirect to the init-session endpoint on the login domain
-      const redirectUrl = `http://login.lvh.me:5173/api/auth/init-session/${tenantId}`;
-      console.log(`Redirecting to: ${redirectUrl}`);
-      window.location.href = redirectUrl;
+      try {
+        console.log(`Initializing tenant session for: ${tenantId}`);
+
+        // Use the API client to initiate the session rather than direct redirect
+        // This will use the proxy setup correctly
+        const response = await authApi.initTenantSession(tenantId);
+        console.log("Tenant session response:", response);
+
+        // If we're here, something went wrong with the redirect
+        // As a fallback, redirect manually with correct port
+        const protocol = window.location.protocol;
+        const currentPort = window.location.port || "3000";
+        const redirectUrl = `${protocol}//${tenantId}.lvh.me:${currentPort}`;
+        console.log(`Manual redirect to: ${redirectUrl}`);
+        window.location.href = redirectUrl;
+      } catch (error) {
+        console.error("Failed to initialize tenant session:", error);
+      }
     } else {
       console.error("Cannot login to tenant from non-login domain");
     }

@@ -15,17 +15,11 @@ function App() {
           {!isTenantDomain ? (
             // Login domain routes
             <>
-              <Route
-                path="/login"
-                element={<LoginPage />}
-              />
+              <Route path="/login" element={<LoginPage />} />
               <Route
                 path="/select-tenant"
                 element={
-                  <ProtectedRoute
-                    requireLogin={true}
-                    requireTenant={false}
-                  >
+                  <ProtectedRoute requireLogin={true} requireTenant={false}>
                     <TenantSelectPage />
                   </ProtectedRoute>
                 }
@@ -33,10 +27,7 @@ function App() {
               <Route
                 path="/"
                 element={
-                  <ProtectedRoute
-                    requireLogin={true}
-                    requireTenant={false}
-                  >
+                  <ProtectedRoute requireLogin={true} requireTenant={false}>
                     <TenantSelectPage />
                   </ProtectedRoute>
                 }
@@ -45,17 +36,7 @@ function App() {
           ) : (
             // Tenant domain routes
             <>
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute
-                    requireLogin={true}
-                    requireTenant={true}
-                  >
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/" element={<DashboardPage />} />
               {/* Add more tenant-specific routes here */}
             </>
           )}

@@ -99,11 +99,33 @@ export class TenantSessionGuard implements CanActivate {
         };
       } else {
         // Tenant domain - verify tenant access
-        const tenantId = req.session.user.tenant;
+        let tenantId = req.session.user.tenant;
 
+        // If no tenant is specified in the session, try to extract it from the hostname
         if (!tenantId) {
-          this.logger.error('No tenant specified in session');
-          throw new UnauthorizedException('No tenant specified');
+          this.logger.warn(
+            'No tenant specified in session, trying to extract from hostname',
+          );
+
+          // Extract tenant from hostname
+          const extractedTenant = hostname.split('.')[0];
+          if (extractedTenant && extractedTenant !== 'login') {
+            this.logger.log(
+              `Auto-creating session for tenant: ${extractedTenant}`,
+            );
+
+            // Auto-set the tenant in the session
+            req.session.user.tenant = extractedTenant;
+            tenantId = extractedTenant;
+
+            // Save the session
+            await new Promise<void>((resolve) => {
+              req.session.save(() => resolve());
+            });
+          } else {
+            this.logger.error('Could not extract valid tenant from hostname');
+            throw new UnauthorizedException('No tenant specified');
+          }
         }
 
         // Check if hostname matches tenant

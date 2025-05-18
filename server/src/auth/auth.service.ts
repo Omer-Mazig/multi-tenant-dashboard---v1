@@ -150,8 +150,16 @@ export class AuthService {
     return token;
   }
 
-  verifyTenantToken(token: string, req: Request): VerifyTokenResult {
+  async verifyTenantToken(
+    token: string,
+    req: Request,
+  ): Promise<VerifyTokenResult> {
     try {
+      this.logger.debug(`Verifying token: ${token}`);
+      this.logger.debug(
+        `Available tokens: ${Array.from(this.tempAuthTokens.keys()).join(', ')}`,
+      );
+
       const tokenData = this.tempAuthTokens.get(token);
 
       if (!tokenData) {
@@ -159,15 +167,24 @@ export class AuthService {
         return { success: false, message: 'Invalid or expired token' };
       }
 
+      this.logger.debug(`Token data: ${JSON.stringify(tokenData)}`);
+
       if (tokenData.expires < Date.now()) {
-        this.logger.error('Token expired');
+        this.logger.error(
+          `Token expired: ${new Date(tokenData.expires).toISOString()}`,
+        );
         this.tempAuthTokens.delete(token);
         return { success: false, message: 'Token expired' };
       }
 
       const { id, tenantId } = tokenData;
+      this.logger.debug(`Token is for user ${id}, tenant ${tenantId}`);
 
       const hostname = req.hostname || req.headers.host?.split(':')[0] || '';
+      this.logger.debug(
+        `Request hostname: ${hostname}, checking against tenant: ${tenantId}`,
+      );
+
       if (!hostname.includes(tenantId)) {
         this.logger.error(
           `Token used on wrong tenant: ${hostname} vs ${tenantId}`,
@@ -179,15 +196,34 @@ export class AuthService {
       if (req.session) {
         // Find the user to get additional data if needed
         const user = this.userService.findById(id, tenantId);
+        this.logger.debug(`Found user for session: ${user ? 'Yes' : 'No'}`);
 
-        req.session.user = {
-          id,
-          email: user?.email || 'unknown@example.com', // Provide email as required
-          tenant: tenantId,
-          lastAccess: Date.now(),
-        };
-        req.session.lastAccess = Date.now();
-        req.session.save();
+        try {
+          req.session.user = {
+            id,
+            email: user?.email || 'unknown@example.com', // Provide email as required
+            tenant: tenantId,
+            lastAccess: Date.now(),
+          };
+          req.session.lastAccess = Date.now();
+
+          // Save session explicitly and wait for it to complete
+          this.logger.debug('Saving session for tenant user');
+          await new Promise<void>((resolve, reject) => {
+            req.session.save((err: any) => {
+              if (err) {
+                this.logger.error(`Failed to save tenant session: ${err}`);
+                reject(err);
+              } else {
+                this.logger.debug('Tenant session saved successfully');
+                resolve();
+              }
+            });
+          });
+        } catch (sessionError) {
+          this.logger.error(`Error saving tenant session: ${sessionError}`);
+          return { success: false, message: 'Session save failed' };
+        }
       } else {
         this.logger.warn('No session object available for tenant verification');
         return { success: false, message: 'Session not available' };
